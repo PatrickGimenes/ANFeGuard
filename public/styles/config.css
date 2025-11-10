@@ -1,0 +1,223 @@
+/* ======= VARIÁVEIS ======= */
+:root {
+  --color-bg: #0f172a;
+  --color-sidebar: #1e293b;
+  --color-surface: #1e293b;
+  --color-text: #e2e8f0;
+  --color-accent: #3b82f6;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+  --color-border: #334155;
+  --radius: 8px;
+  --transition: 0.2s ease;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* ======= LAYOUT ======= */
+body {
+  display: flex;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  margin: 0;
+  height: 100vh;
+}
+
+/* ======= SIDEBAR ======= */
+.sidebar {
+  background-color: var(--color-sidebar);
+  width: 240px;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar .logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.sidebar nav a {
+  color: var(--color-text);
+  text-decoration: none;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius);
+  transition: var(--transition);
+}
+
+.sidebar nav a:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar nav a.active {
+  background-color: var(--color-accent);
+  color: #fff;
+}
+
+/* ======= CONTEÚDO PRINCIPAL ======= */
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+header h1 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ======= SEÇÕES ======= */
+.settings-section {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  max-width: 700px;
+}
+
+.settings-section h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1.2rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+  color: var(--color-accent);
+}
+
+/* ======= CAMPOS ======= */
+.settings-section label {
+  display: block;
+  margin-top: 1rem;
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+}
+
+.settings-section input,
+.settings-section select {
+  width: 100%;
+  background-color: #0f172a;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.6rem;
+  outline: none;
+  transition: var(--transition);
+}
+
+.settings-section input:focus,
+.settings-section select:focus {
+  border-color: var(--color-accent);
+}
+
+/* ======= BOTÕES ======= */
+.settings-section button {
+  margin-top: 1.2rem;
+  background-color: var(--color-accent);
+  color: #fff;
+  border: none;
+  padding: 0.8rem 1.2rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.settings-section button:hover {
+  background-color: #2563eb;
+}
+
+#add-service-btn {
+  background-color: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  margin-bottom: 1rem;
+}
+
+#add-service-btn:hover {
+  background-color: var(--color-accent);
+  color: #fff;
+}
+
+/* ======= TABELA ======= */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.table th,
+.table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.table th {
+  background-color: #111827;
+  font-weight: 600;
+}
+
+.table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* ======= AÇÕES ======= */
+.table button {
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: var(--radius);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.table button.edit {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.table button.del {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.table button:hover.edit {
+  background-color: var(--color-success);
+  color: #fff;
+}
+
+.table button:hover.del {
+  background-color: var(--color-danger);
+  color: #fff;
+}
+
+/* ======= RESPONSIVIDADE ======= */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 180px;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+
+  .settings-section {
+    max-width: 100%;
+  }
+
+  .table th, .table td {
+    font-size: 0.9rem;
+  }
+}

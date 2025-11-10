@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./styles/service.css" />
+    <link rel="shortcut icon" href="icon.ico" type="image/x-icon" />
+    <title>Serviços – ANFeGuard</title>
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  </head>
+  <body>
+    <div class="sidebar">
+      <h2 class="logo">ANFeGuard</h2>
+      <nav>
+        <a href="/index.html">Dashboard</a>
+        <a href="/servico.html" class="active">Serviços</a>
+        <a href="/cadastro.html">Controle de Portas</a>
+        <a href="/logs.html">Logs</a>
+      </nav>
+    </div>
+
+    <div class="main-content">
+      <header>
+        <h1>Monitoramento de Serviços</h1>
+      </header>
+
+      <section class="cards">
+        <button
+          class="add-service"
+          onclick="document.getElementById('modal').showModal()"
+        >
+          + Adicionar Serviço
+        </button>
+
+        <!-- Modal de cadastro -->
+        <dialog id="modal" class="modal">
+          <form
+            hx-post="/api/servico"
+            hx-target="#service-list"
+            hx-swap="afterbegin"
+            hx-on="htmx:afterOnLoad: this.reset(); document.getElementById('modal').close(); htmx.trigger('#service-list', 'refresh');"
+            class="modal-form"
+          >
+            <h2>Adicionar Serviço</h2>
+            <input
+              type="text"
+              name="servicename"
+              placeholder="Nome do serviço"
+              required
+            />
+            <div class="modal-actions">
+              <button type="submit" class="btn-primary">Salvar</button>
+              <button
+                type="button"
+                class="btn-cancel"
+                onclick="document.getElementById('modal').close()"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </dialog>
+
+        <!-- Lista de serviços -->
+        <div
+          id="service-list"
+          hx-get="/api/servicos"
+          hx-trigger="load, every 5s, refresh from:body"
+          hx-swap="innerHTML"
+        >
+          <!-- Cards serão renderizados aqui -->
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // Renderização de cards
+      document.body.addEventListener("htmx:afterRequest", (evt) => {
+        if (evt.detail.pathInfo.requestPath === "/api/servicos") {
+          const xhr = evt.detail.xhr;
+          try {
+            const data = JSON.parse(xhr.responseText);
+            const container = document.getElementById("service-list");
+            container.innerHTML = data
+              .map(
+                (srv) => `
+              <div class="service-card ${srv.status}">
+                <h3>${srv.nome}</h3>
+                <p>Status: <span>${srv.status}</span></p>
+              </div>
+            `
+              )
+              .join("");
+          } catch (err) {
+            console.error("Erro ao processar JSON:", err);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
