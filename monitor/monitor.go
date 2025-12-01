@@ -38,27 +38,32 @@ func Start(cfg MonitorConfig) {
 func monitorSystem(cfg MonitorConfig) {
 	info, err := sysinfo.GetSystemInfo(cfg.DiskPath)
 	if err != nil {
-		log.Println("[ERRO] Falha ao coletar informações do sistema:", err)
+		log.Println("[ERRO] Coleta de sistema:", err)
 		return
 	}
+
 	currentTime := time.Now().Format("02/01/2006 15:04:05")
-	fmt.Printf("Horário: %v | CPU: %.1f%% | Memória: %.1f%% | Disco: %.1f%%\n", currentTime,
-		info.CPUPercent, info.MemoryPercent, info.DiskUsedPercent)
 
 	if info.CPUPercent > cfg.CPULimit || info.MemoryPercent > cfg.MemLimit {
-		data := email.EmailData{
-			CPU:    info.CPUPercent,
-			Memory: info.MemoryPercent,
-			Disk:   info.DiskUsedPercent,
-			Time:   currentTime,
+
+		data := email.EmailAlertData{
+			Service: "", // não é alerta de serviço
+			CPU:     info.CPUPercent,
+			Memory:  info.MemoryPercent,
+			Disk:    info.DiskUsedPercent,
+			Time:    currentTime,
 		}
 
-		err := email.SendEmail(cfg.EmailConfig, cfg.Recipients,
+		err := email.SendEmail(
+			cfg.EmailConfig,
+			cfg.Recipients,
 			"🚨 Alerta ANFeGuard — Uso elevado de recursos",
-			"email/templates/alerta.html", data)
+			"email/templates/alerta.html",
+			data,
+		)
 
 		if err != nil {
-			log.Println("[ERRO] Falha ao enviar e-mail de alerta de sistema:", err)
+			log.Println("[ERRO] Envio de e-mail de alerta de sistema:", err)
 		}
 	}
 }
@@ -100,12 +105,20 @@ func monitorServices(cfg MonitorConfig) {
 }
 
 func sendServiceEmail(cfg MonitorConfig, serviceName, subject string) {
-	data := email.EmailData{
-		Time: time.Now().Format("01/01/2025 00:00:00"),
+
+	sysInfo, _ := sysinfo.GetSystemInfo(cfg.DiskPath)
+
+	data := email.EmailAlertData{
+		Service: serviceName,
+		CPU:     sysInfo.CPUPercent,
+		Memory:  sysInfo.MemoryPercent,
+		Disk:    sysInfo.DiskUsedPercent,
+		Time:    time.Now().Format("02/01/2006 15:04:05"),
 	}
-	template := "email/templates/alerta.html"
+
+	template := "email/templates/service_stopped.html"
 
 	if err := email.SendEmail(cfg.EmailConfig, cfg.Recipients, subject, template, data); err != nil {
-		log.Printf("[ERRO] Falha ao enviar e-mail de serviço '%s': %v\n", serviceName, err)
+		log.Printf("[ERRO] Falha ao enviar e-mail do serviço '%s': %v\n", serviceName, err)
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"net/smtp"
 )
 
-// Config email
+// Config do email
 type SMTPConfig struct {
 	Host     string
 	Port     int
@@ -17,16 +17,17 @@ type SMTPConfig struct {
 	From     string
 }
 
-// Dados do e-mail
-type EmailData struct {
-	CPU    float64
-	Memory float64
-	Disk   float64
-	Time   string
+// Struct único para todos os templates
+type EmailAlertData struct {
+	Service string
+	CPU     float64
+	Memory  float64
+	Disk    float64
+	Time    string
 }
 
-func SendEmail(cfg SMTPConfig, to []string, subject, templatePath string, data EmailData) error {
-	//carrega o template
+func SendEmail(cfg SMTPConfig, to []string, subject, templatePath string, data EmailAlertData) error {
+	// Carregar template
 	templ, err := template.ParseFiles(templatePath)
 	if err != nil {
 		return err
@@ -34,12 +35,11 @@ func SendEmail(cfg SMTPConfig, to []string, subject, templatePath string, data E
 
 	var body bytes.Buffer
 
-	//render do template
 	if err := templ.Execute(&body, data); err != nil {
 		return err
 	}
 
-	//Monta o header do e-mail
+	// Header do email
 	msg := "MIME-Version: 1.0\r\n"
 	msg += "Content-Type: text/html; charset=UTF-8\r\n"
 	msg += "From: " + cfg.From + "\r\n"
@@ -47,14 +47,15 @@ func SendEmail(cfg SMTPConfig, to []string, subject, templatePath string, data E
 	msg += "Subject: " + subject + "\r\n\r\n"
 	msg += body.String()
 
-	//login e envio
-	auth := smtp.PlainAuth("", cfg.User, cfg.Password, cfg.Password)
+	// Autenticação
+	auth := smtp.PlainAuth("", cfg.User, cfg.Password, cfg.Host)
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
+	// Envio
 	if err := smtp.SendMail(addr, auth, cfg.From, to, []byte(msg)); err != nil {
 		return err
 	}
-	log.Printf("E-mail enviado para %v \n", to)
 
+	log.Printf("E-mail enviado para %v \n", to)
 	return nil
 }
