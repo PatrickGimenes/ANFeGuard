@@ -53,7 +53,6 @@ func main() {
 	cfg := monitor.MonitorConfig{
 
 		Period:   time.Duration(period) * time.Second,
-		Services: database.GetServices(),
 		EmailConfig: email.SMTPConfig{
 			Host:     os.Getenv("EMAIL_HOST"),
 			Port:     port,

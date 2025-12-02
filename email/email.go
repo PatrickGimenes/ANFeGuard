@@ -20,9 +20,9 @@ type SMTPConfig struct {
 // Struct único para todos os templates
 type EmailAlertData struct {
 	Service string
-	CPU     float64
-	Memory  float64
-	Disk    float64
+	CPU     string
+	Memory  string
+	Disk    string
 	Time    string
 }
 

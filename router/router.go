@@ -4,7 +4,6 @@ import (
 	"ANFeGuard/controllers"
 	"ANFeGuard/database"
 	"ANFeGuard/sysinfo"
-	"ANFeGuard/winservice"
 	"encoding/json"
 
 	"net/http"
@@ -18,12 +17,13 @@ func SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/health", handleHealth)
 	mux.HandleFunc("/api/metrics", handleMetrics)
 
-	mux.HandleFunc("/api/servicos", handleServices)
-	mux.HandleFunc("POST /api/servico", CriarServico)
+	mux.HandleFunc("GET /api/servicos", controllers.HandleServices)
+	mux.HandleFunc("POST /api/servico", controllers.CriarServico)
+
 
 	mux.HandleFunc("/api/portas", controllers.ListarPortas)
-	mux.HandleFunc("POST /api/porta", controllers.CriarPorta)
-	mux.HandleFunc("DELETE /api/porta/{id}", controllers.DeletarPorta)
+	mux.HandleFunc("/api/porta", controllers.CriarPorta)
+	mux.HandleFunc("/api/porta/{id}", controllers.DeletarPorta)
 
 	mux.HandleFunc("/api/logs", HandleLogs)
 
@@ -47,75 +47,6 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	encode := json.NewEncoder(w)
 	encode.SetIndent("", " ")
 	_ = encode.Encode(info)
-}
-
-func handleServices(w http.ResponseWriter, r *http.Request) {
-	type Service struct {
-		Nome   string            `json:"nome"`
-		Status winservice.Status `json:"status"`
-	}
-
-	rows, err := database.DB.Query(`SELECT nome FROM servicos ORDER BY nome ASC`)
-	if err != nil {
-		http.Error(w, "Erro ao listar serviços", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var services []Service
-
-	for rows.Next() {
-		var s Service
-		if err := rows.Scan(&s.Nome); err != nil {
-			return
-		}
-
-		statusAtual, err := winservice.GetStatus(s.Nome)
-		if err == nil {
-			s.Status = statusAtual
-		}
-
-		services = append(services, s)
-
-	}
-
-	if err := rows.Err(); err != nil {
-		http.Error(w, "Erro ao processar resultados", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(services)
-}
-
-func CriarServico(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Lê os dados do form (vindo do HTMX)
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Erro ao ler formulário: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	nome := r.FormValue("servicename")
-	if nome == "" {
-		http.Error(w, "O campo 'servicename' é obrigatório", http.StatusBadRequest)
-		return
-	}
-
-	// Insere no banco
-	_, err := database.DB.Exec(`INSERT INTO servicos (nome) VALUES ($1)`, nome)
-	if err != nil {
-		http.Error(w, "Erro ao inserir serviço: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Retorna algum conteúdo para HTMX (pode ser vazio, mas não JSON inválido)
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(nome)) // HTMX aceita texto simples
 }
 
 type ServiceLog struct {

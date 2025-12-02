@@ -12,12 +12,15 @@ select * from portas;
 --drop table servicos;
 CREATE TABLE servicos (
     id SERIAL PRIMARY KEY,
-    nome TEXT NOT null UNIQUE
+    nome VARCHAR(15) NOT NULL UNIQUE,
+    status SMALLINT NOT NULL DEFAULT 1
 );
 
 
---delete from servicos where id = 29;
+--delete from servicos where id = 3;
 select * from servicos;
+
+
 
 --drop table service_logs;
 CREATE TABLE service_logs (
@@ -32,3 +35,4 @@ CREATE TABLE service_logs (
 
 select * from service_logs;
 
+--truncate table service_logs;

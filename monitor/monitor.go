@@ -12,7 +12,6 @@ import (
 
 type MonitorConfig struct {
 	Period      time.Duration
-	Services    []string
 	EmailConfig email.SMTPConfig
 	Recipients  []string
 	MaxRetries  int
@@ -44,13 +43,16 @@ func monitorSystem(cfg MonitorConfig) {
 
 	currentTime := time.Now().Format("02/01/2006 15:04:05")
 
+	fmt.Printf("Horário: %v | CPU: %.1f%% | Memória: %.1f%% | Disco: %.1f%%\n", currentTime,
+		info.CPUPercent, info.MemoryPercent, info.DiskUsedPercent)
+
 	if info.CPUPercent > cfg.CPULimit || info.MemoryPercent > cfg.MemLimit {
 
 		data := email.EmailAlertData{
 			Service: "", // não é alerta de serviço
-			CPU:     info.CPUPercent,
-			Memory:  info.MemoryPercent,
-			Disk:    info.DiskUsedPercent,
+			CPU:     fmt.Sprintf("%.2f%%", info.CPUPercent),
+			Memory:  fmt.Sprintf("%.2f%%", info.MemoryPercent),
+			Disk:    fmt.Sprintf("%.2f%%", info.DiskUsedPercent),
 			Time:    currentTime,
 		}
 
@@ -70,12 +72,14 @@ func monitorSystem(cfg MonitorConfig) {
 
 // ========== MONITORAMENTO DE SERVIÇOS ==========
 func monitorServices(cfg MonitorConfig) {
+	services := database.GetServices()
+
 	sysInfo, err := sysinfo.GetSystemInfo(cfg.DiskPath)
 	if err != nil {
 		log.Println("[ERRO] Falha ao coletar informações do sistema:", err)
 		return
 	}
-	for _, svc := range cfg.Services {
+	for _, svc := range services {
 		status, err := winservice.GetStatus(svc)
 		if err != nil {
 			msg := fmt.Sprintf("Falha ao obter status: %v", err)
@@ -90,8 +94,9 @@ func monitorServices(cfg MonitorConfig) {
 			msg := "Serviço parado"
 
 			database.LogServiceError(svc, string(status), msg, sysInfo.MemoryPercent)
+
 			if err := winservice.Start(svc); err != nil {
-				msg := "Serviço parado"
+				// msg := "Serviço parado"
 				log.Printf("[ERRO] Falha ao iniciar '%s': %v\n", svc, err)
 				sendServiceEmail(cfg, svc, "Falha ao iniciar serviço")
 				database.LogServiceError(svc, string(status), msg, sysInfo.MemoryPercent)
@@ -110,9 +115,9 @@ func sendServiceEmail(cfg MonitorConfig, serviceName, subject string) {
 
 	data := email.EmailAlertData{
 		Service: serviceName,
-		CPU:     sysInfo.CPUPercent,
-		Memory:  sysInfo.MemoryPercent,
-		Disk:    sysInfo.DiskUsedPercent,
+		CPU:     fmt.Sprintf("%.2f%%", sysInfo.CPUPercent),
+		Memory:  fmt.Sprintf("%.2f%%", sysInfo.MemoryPercent),
+		Disk:    fmt.Sprintf("%.2f%%", sysInfo.DiskUsedPercent),
 		Time:    time.Now().Format("02/01/2006 15:04:05"),
 	}
 

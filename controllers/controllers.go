@@ -16,7 +16,7 @@ type Porta struct {
 	Ambiente string
 }
 
-// POST /api/servicos
+// POST /api/porta
 func CriarPorta(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Erro ao processar formulário", http.StatusBadRequest)
@@ -103,7 +103,7 @@ func atoi(s string) int {
 }
 
 func DeletarPorta(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id") 
+	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "ID inválido", http.StatusBadRequest)
 		return
