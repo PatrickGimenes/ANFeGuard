@@ -6,7 +6,18 @@
     <title>Logs de Serviços - ANFeGuard</title>
     <link rel="shortcut icon" href="icon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="./styles/logs.css" />
+
+    <!-- DataTables CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css"
+    />
+
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+
+    <!-- jQuery + DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
   </head>
   <body>
     <div class="sidebar">
@@ -24,7 +35,7 @@
         <h1>Logs de Serviços</h1>
       </header>
 
-      <table class="logs-table">
+      <table id="logsTable" class="logs-table display">
         <thead>
           <tr>
             <th>ID</th>
@@ -35,6 +46,7 @@
             <th>Data/Hora</th>
           </tr>
         </thead>
+
         <tbody
           id="logs-body"
           hx-get="/api/logs"
@@ -49,26 +61,48 @@
     </div>
 
     <script>
+      let dataTableInstance = null;
+
+      function initDataTable() {
+        if (dataTableInstance) {
+          dataTableInstance.destroy(); // remove instância anterior
+        }
+
+        dataTableInstance = new DataTable("#logsTable", {
+          pageLength: 25,
+          ordering: true,
+          responsive: true,
+          language: {
+            url: "https://cdn.datatables.net/plug-ins/2.1.8/i18n/pt-BR.json",
+          },
+        });
+      }
+
+      // Atualizar tabela após HTMX carregar dados
       document.body.addEventListener("htmx:afterRequest", (evt) => {
         if (evt.detail.pathInfo.requestPath === "/api/logs") {
           const xhr = evt.detail.xhr;
+
           try {
             const data = JSON.parse(xhr.responseText);
             const container = document.getElementById("logs-body");
+
             container.innerHTML = data
               .map(
                 (log) => `
-            <tr>
-              <td>${log.id}</td>
-              <td>${log.service_name}</td>
-              <td>${log.status}</td>
-              <td>${log.message || ""}</td>
-              <td>${log.memory_percent || ""}</td>
-              <td>${log.created_at}</td>
-            </tr>
-          `
+                  <tr>
+                    <td>${log.id}</td>
+                    <td>${log.service_name}</td>
+                    <td>${log.status}</td>
+                    <td>${log.message || ""}</td>
+                    <td>${log.memory_percent || ""}</td>
+                    <td>${log.created_at}</td>
+                  </tr>
+                `
               )
               .join("");
+
+            initDataTable();
           } catch (err) {
             console.error("Erro ao processar JSON:", err);
           }
