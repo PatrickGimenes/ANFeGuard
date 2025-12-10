@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial; background: #f7f7f7; padding: 20px">
+    <div
+      style="
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 6px solid #999;
+      "
+    >
+      <h2 style="color: #555; margin-bottom: 10px">⚠ Notificação do Sistema</h2>
+
+      <p style="font-size: 16px">
+        Uma notificação foi gerada para o serviço:
+        <strong>{{.Service}}</strong>.
+      </p>
+
+      <p style="margin-top: 20px">Status do servidor:</p>
+
+      <ul style="line-height: 1.7; font-size: 15px">
+        <li>CPU: <strong>{{.CPU}}</strong></li>
+        <li>Memória: <strong>{{.Memory}}</strong></li>
+        <li>Disco ({{.DiskPath}}): <strong>{{.Disk}}</strong></li>
+        <li>Data/Hora: <strong>{{.Time}}</strong></li>
+      </ul>
+
+      <p style="margin-top: 25px; color: #555">
+        Veja os logs para mais informações.
+      </p>
+    </div>
+  </body>
+</html>

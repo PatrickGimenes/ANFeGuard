@@ -20,9 +20,14 @@ type MonitorConfig struct {
 	DiskPath    string
 }
 
-// Start inicia o monitoramento unificado (serviços + recursos)
+// Controla tentativas por serviço
+var retryCount = map[string]int{}
+
+// =====================================================
+// INICIO DO MONITORAMENTO
+// =====================================================
 func Start(cfg MonitorConfig) {
-	fmt.Println("Monitor ANFeGuard iniciado — intervalo:", cfg.Period)
+	log.Printf("[INFO] ANFeGuard Monitor iniciado | Intervalo: %s\n", cfg.Period)
 
 	ticker := time.NewTicker(cfg.Period)
 	defer ticker.Stop()
@@ -33,97 +38,150 @@ func Start(cfg MonitorConfig) {
 	}
 }
 
-// ========== MONITORAMENTO DE SISTEMA ==========
+// =====================================================
+// MONITORAMENTO DE SISTEMA (CPU / RAM / DISCO)
+// =====================================================
 func monitorSystem(cfg MonitorConfig) {
 	info, err := sysinfo.GetSystemInfo(cfg.DiskPath)
 	if err != nil {
-		log.Println("[ERRO] Coleta de sistema:", err)
+		log.Printf("[ERROR] Falha ao coletar informações de sistema: %v\n", err)
 		return
 	}
 
-	currentTime := time.Now().Format("02/01/2006 15:04:05")
+	now := time.Now().Format("02/01/2006 15:04:05")
 
-	fmt.Printf("Horário: %v | CPU: %.1f%% | Memória: %.1f%% | Disco: %.1f%%\n", currentTime,
-		info.CPUPercent, info.MemoryPercent, info.DiskUsedPercent)
+	log.Printf("[INFO] %s | CPU: %.1f%% | RAM: %.1f%% | Disco(%s): %.1f%%",
+		now, info.CPUPercent, info.MemoryPercent, cfg.DiskPath, info.DiskUsedPercent)
 
+	// Verifica limites
 	if info.CPUPercent > cfg.CPULimit || info.MemoryPercent > cfg.MemLimit {
-
-		data := email.EmailAlertData{
-			Service: "", // não é alerta de serviço
-			CPU:     fmt.Sprintf("%.2f%%", info.CPUPercent),
-			Memory:  fmt.Sprintf("%.2f%%", info.MemoryPercent),
-			Disk:    fmt.Sprintf("%.2f%%", info.DiskUsedPercent),
-			Time:    currentTime,
-		}
-
-		err := email.SendEmail(
-			cfg.EmailConfig,
-			cfg.Recipients,
-			"🚨 Alerta ANFeGuard — Uso elevado de recursos",
-			"email/templates/alerta.html",
-			data,
-		)
-
-		if err != nil {
-			log.Println("[ERRO] Envio de e-mail de alerta de sistema:", err)
-		}
+		log.Printf("[ALERT] Limites de recursos excedidos (CPU/RAM)\n")
+		sendServiceEmail(cfg, "", "ResourceAlert", "🚨 Alerta ANFeGuard — Uso elevado de recursos")
 	}
 }
 
-// ========== MONITORAMENTO DE SERVIÇOS ==========
+// =====================================================
+// MONITORAMENTO DE SERVIÇOS
+// =====================================================
 func monitorServices(cfg MonitorConfig) {
 	services := database.GetServices()
-
 	sysInfo, err := sysinfo.GetSystemInfo(cfg.DiskPath)
 	if err != nil {
-		log.Println("[ERRO] Falha ao coletar informações do sistema:", err)
+		log.Printf("[ERROR] Falha ao coletar system info para serviços: %v\n", err)
 		return
 	}
+
 	for _, svc := range services {
 		status, err := winservice.GetStatus(svc)
 		if err != nil {
-			msg := fmt.Sprintf("Falha ao obter status: %v", err)
-			log.Printf("[ERRO] Serviço '%s': %v\n", svc, err)
-			database.LogServiceError(svc, "Unknown", msg, sysInfo.MemoryPercent)
+			logServiceError(cfg, svc, "Unknown", fmt.Sprintf("Erro ao obter status: %v", err), sysInfo)
 			continue
-
 		}
 
-		if status == winservice.StatusStopped {
-			log.Printf("[ALERTA] Serviço '%s' está parado. Tentando iniciar...\n", svc)
-			msg := "Serviço parado"
-
-			database.LogServiceError(svc, string(status), msg, sysInfo.MemoryPercent)
-
-			if err := winservice.Start(svc); err != nil {
-				// msg := "Serviço parado"
-				log.Printf("[ERRO] Falha ao iniciar '%s': %v\n", svc, err)
-				sendServiceEmail(cfg, svc, "Falha ao iniciar serviço")
-				database.LogServiceError(svc, string(status), msg, sysInfo.MemoryPercent)
-				continue
-			}
-
-			log.Printf("[OK] Serviço '%s' inciado com sucesso.\n", svc)
-			sendServiceEmail(cfg, svc, "Serviço iniciado automaticamente")
+		if status != winservice.StatusStopped {
+			resetRetries(svc)
+			continue
 		}
+
+		// Serviço parado
+		retryServiceStart(cfg, svc, status, sysInfo)
 	}
 }
 
-func sendServiceEmail(cfg MonitorConfig, serviceName, subject string) {
+// =====================================================
+// LÓGICA DE RETENTATIVA DE INÍCIO DE SERVIÇO
+// =====================================================
+func retryServiceStart(cfg MonitorConfig, svc string, status winservice.ServiceStatus, sysInfo *sysinfo.SystemInfo) {
+
+	retryCount[svc]++
+
+	// Excedeu tentativas
+	if retryCount[svc] > cfg.MaxRetries {
+		log.Printf("[ERROR] Serviço '%s' atingiu o máximo de tentativas (%d)\n", svc, cfg.MaxRetries)
+		sendServiceEmail(cfg, svc, "MaxRetries", "🚨 ANFeGuard — Máximo de tentativas atingido")
+		return
+	}
+
+	// Tentando iniciar
+	log.Printf("[ALERT] Serviço '%s' está parado. Tentativa %d/%d\n",
+		svc, retryCount[svc], cfg.MaxRetries)
+
+	logServiceError(cfg, svc, string(status), "Serviço parado", sysInfo)
+
+	sendServiceEmail(cfg, svc, "Stopped", "🚨 Serviço parado — Tentando iniciar...")
+
+	// Tentar iniciar
+	if err := winservice.Start(svc); err != nil {
+		msg := fmt.Sprintf("Falha ao iniciar: %v", err)
+		log.Printf("[ERROR] %s\n", msg)
+
+		sendServiceEmail(cfg, svc, "StartFailed", "❌ Falha ao iniciar serviço!")
+		logServiceError(cfg, svc, string(status), msg, sysInfo)
+
+		return
+	}
+
+	// Sucesso — reseta tentativas
+	resetRetries(svc)
+
+	log.Printf("[SUCCESS] Serviço '%s' iniciado com sucesso.\n", svc)
+	sendServiceEmail(cfg, svc, "Started", "✅ Serviço iniciado com sucesso!")
+}
+
+// =====================================================
+// RESET DE RETENTATIVAS
+// =====================================================
+func resetRetries(service string) {
+	if retryCount[service] > 0 {
+		log.Printf("[INFO] Resetando tentativas do serviço '%s'\n", service)
+	}
+	retryCount[service] = 0
+}
+
+// =====================================================
+// LOG DE ERRO CENTRALIZADO
+// =====================================================
+func logServiceError(cfg MonitorConfig, svc, status, msg string, info *sysinfo.SystemInfo) {
+	log.Printf("[ERROR] Serviço '%s' | Status: %s | %s\n", svc, status, msg)
+	database.LogServiceError(svc, status, msg, info.MemoryPercent)
+}
+
+// =====================================================
+// ENVIO DE EMAIL CENTRALIZADO
+// =====================================================
+func sendServiceEmail(cfg MonitorConfig, serviceName, status string, subject string) {
 
 	sysInfo, _ := sysinfo.GetSystemInfo(cfg.DiskPath)
 
 	data := email.EmailAlertData{
-		Service: serviceName,
-		CPU:     fmt.Sprintf("%.2f%%", sysInfo.CPUPercent),
-		Memory:  fmt.Sprintf("%.2f%%", sysInfo.MemoryPercent),
-		Disk:    fmt.Sprintf("%.2f%%", sysInfo.DiskUsedPercent),
-		Time:    time.Now().Format("02/01/2006 15:04:05"),
+		Service:  serviceName,
+		CPU:      fmt.Sprintf("%.2f%%", sysInfo.CPUPercent),
+		Memory:   fmt.Sprintf("%.2f%%", sysInfo.MemoryPercent),
+		Disk:     fmt.Sprintf("%.2f%%", sysInfo.DiskUsedPercent),
+		DiskPath: cfg.DiskPath,
+		Time:     time.Now().Format("02/01/2006 15:04:05"),
 	}
 
-	template := "email/templates/service_stopped.html"
+	template := selectTemplate(status)
 
 	if err := email.SendEmail(cfg.EmailConfig, cfg.Recipients, subject, template, data); err != nil {
-		log.Printf("[ERRO] Falha ao enviar e-mail do serviço '%s': %v\n", serviceName, err)
+		log.Printf("[ERROR] Falha ao enviar e-mail (%s): %v\n", serviceName, err)
+	}
+}
+
+func selectTemplate(status string) string {
+	switch status {
+	case "Stopped":
+		return "email/templates/service_stopped.html"
+	case "Started":
+		return "email/templates/service_started.html"
+	case "StartFailed":
+		return "email/templates/service_failed.html"
+	case "ResourceAlert":
+		return "email/templates/alerta_recursos.html"
+	case "MaxRetries":
+		return "email/templates/max_retries.html"
+	default:
+		return "email/templates/generic_alert.html"
 	}
 }

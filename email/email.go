@@ -23,6 +23,7 @@ type EmailAlertData struct {
 	CPU     string
 	Memory  string
 	Disk    string
+	DiskPath string
 	Time    string
 }
 
@@ -43,7 +44,7 @@ func SendEmail(cfg SMTPConfig, to []string, subject, templatePath string, data E
 	msg := "MIME-Version: 1.0\r\n"
 	msg += "Content-Type: text/html; charset=UTF-8\r\n"
 	msg += "From: " + cfg.From + "\r\n"
-	msg += "To: " + to[0] + "\r\n"
+	msg += "To: " + strings.Join(to, ", ") + "\r\n"
 	msg += "Subject: " + subject + "\r\n\r\n"
 	msg += body.String()
 
@@ -56,6 +57,6 @@ func SendEmail(cfg SMTPConfig, to []string, subject, templatePath string, data E
 		return err
 	}
 
-	log.Printf("E-mail enviado para %v \n", to)
+	log.Printf("[INFO] E-mail enviado para %v \n", to)
 	return nil
 }

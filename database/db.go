@@ -23,13 +23,13 @@ func Conectar() {
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatalf("Erro ao conectar ao banco: %v", err)
+		log.Fatalf("[ERRO] Erro ao conectar ao banco: %v", err)
 	}
 
 	if err = db.Ping(); err != nil {
-		log.Fatalf("Erro ao testar conexão com banco: %v", err)
+		log.Fatalf("[ERRO] Erro ao testar conexão com banco: %v", err)
 	}
 
 	DB = db
-	fmt.Println("✅ Banco conectado com sucesso.")
+	log.Println("[INFO] Banco conectado com sucesso.")
 }

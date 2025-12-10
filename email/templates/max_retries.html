@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial; background: #fff2f2; padding: 20px">
+    <div
+      style="
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 6px solid #c9302c;
+      "
+    >
+      <h2 style="color: #c9302c; margin-bottom: 10px">
+        Máximo de Tentativas Atingido
+      </h2>
+
+      <p style="font-size: 16px">
+        O serviço <strong>{{.Service}}</strong> não pôde ser iniciado após o
+        número máximo de tentativas.
+      </p>
+
+      <p style="margin-top: 20px">Informações do servidor:</p>
+
+      <ul style="line-height: 1.7; font-size: 15px">
+        <li>CPU: <strong>{{.CPU}}</strong></li>
+        <li>Memória: <strong>{{.Memory}}</strong></li>
+        <li>Disco ({{.DiskPath}}): <strong>{{.Disk}}</strong></li>
+        <li>Data/Hora: <strong>{{.Time}}</strong></li>
+      </ul>
+
+      <p style="margin-top: 25px; color: #555">
+        A intervenção manual é necessária. O problema não pôde ser resolvido
+        automaticamente.
+      </p>
+    </div>
+  </body>
+</html>

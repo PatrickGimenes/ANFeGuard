@@ -29,27 +29,32 @@ func main() {
 
 	period, err := strconv.Atoi(os.Getenv("PERIOD"))
 	if err != nil {
-		fmt.Println("Erro ao converter:", err)
+		log.Println("Erro ao converter:", err)
 		return
 	}
 
 	port, err := strconv.Atoi(os.Getenv("EMAIL_PORT"))
 	if err != nil {
-		fmt.Println("Erro ao converter:", err)
+		log.Println("Erro ao converter:", err)
 		return
 	}
 
 	max, err := strconv.Atoi(os.Getenv("MAX_RETRIES"))
 	if err != nil {
-		fmt.Println("Erro ao converter:", err)
+		log.Println("Erro ao converter:", err)
 		return
 	}
 
 	limit, err := strconv.ParseFloat(os.Getenv("THRESHOLD_WARNING"), 64) // 64 é a precisão (float64)
 	if err != nil {
-		fmt.Println("Erro ao converter:", err)
+		log.Println("Erro ao converter:", err)
 		return
 	}
+
+
+	emails := os.Getenv("NOTIFY_EMAILS")
+	recipients := strings.Split(emails, ",")
+
 	cfg := monitor.MonitorConfig{
 
 		Period:   time.Duration(period) * time.Second,
@@ -60,7 +65,7 @@ func main() {
 			Password: os.Getenv("EMAIL_PASS"),
 			From:     os.Getenv("EMAIL_USER"),
 		},
-		Recipients: []string{os.Getenv("NOTIFY_EMAIL")},
+		Recipients: recipients,
 		MaxRetries: max,
 		CPULimit:   limit,
 		MemLimit:   limit,
@@ -73,7 +78,7 @@ func main() {
 		API_port = "8080" // porta padrão
 	}
 	addr := ":" + API_port // forma correta para ListenAndServe
-	log.Printf("Servidor rodando em http://localhost%s", addr)
+	log.Printf("Servidor rodando em http://localhost%s ou IP_SERVIDOR:%s", addr, addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("Erro ao iniciar servidor: %v", err)
 	}

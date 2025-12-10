@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial; background: #fef3f3; padding: 20px">
+    <div
+      style="
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 6px solid #d9534f;
+      "
+    >
+      <h2 style="color: #d9534f; margin-bottom: 10px">
+        🚨 Uso Elevado de Recursos
+      </h2>
+
+      <p style="font-size: 16px">
+        O sistema identificou um consumo acima do limite configurado.
+      </p>
+
+      <p style="margin-top: 20px">Estado atual:</p>
+
+      <ul style="line-height: 1.7; font-size: 15px">
+        <li>CPU: <strong>{{.CPU}}</strong></li>
+        <li>Memória: <strong>{{.Memory}}</strong></li>
+        <li>Disco ({{.DiskPath}}): <strong>{{.Disk}}</strong></li>
+        <li>Data/Hora: <strong>{{.Time}}</strong></li>
+      </ul>
+
+      <p style="margin-top: 25px; color: #555">
+        Verifique o servidor. Isso pode afetar o desempenho dos serviços.
+      </p>
+    </div>
+  </body>
+</html>
