@@ -4,7 +4,7 @@ import "log"
 
 // GetServices retorna todos os nomes de serviços cadastrados no banco
 func GetServices() []string {
-	rows, err := DB.Query(`SELECT nome FROM servicos ORDER BY nome ASC`)
+	rows, err := DB.Query(`SELECT nome FROM servicos WHERE status = 1 ORDER BY nome ASC`)
 	if err != nil {
 		log.Println("[ERRO] Falha ao listar serviços:", err)
 		return []string{}

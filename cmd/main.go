@@ -7,6 +7,7 @@ import (
 	"ANFeGuard/router"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"fmt"
@@ -51,13 +52,12 @@ func main() {
 		return
 	}
 
-
 	emails := os.Getenv("NOTIFY_EMAILS")
 	recipients := strings.Split(emails, ",")
 
 	cfg := monitor.MonitorConfig{
 
-		Period:   time.Duration(period) * time.Second,
+		Period: time.Duration(period) * time.Second,
 		EmailConfig: email.SMTPConfig{
 			Host:     os.Getenv("EMAIL_HOST"),
 			Port:     port,
@@ -78,7 +78,7 @@ func main() {
 		API_port = "8080" // porta padrão
 	}
 	addr := ":" + API_port // forma correta para ListenAndServe
-	log.Printf("Servidor rodando em http://localhost%s ou IP_SERVIDOR:%s", addr, addr)
+	log.Printf("Servidor rodando em http://localhost%s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("Erro ao iniciar servidor: %v", err)
 	}

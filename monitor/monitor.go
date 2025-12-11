@@ -56,7 +56,7 @@ func monitorSystem(cfg MonitorConfig) {
 	// Verifica limites
 	if info.CPUPercent > cfg.CPULimit || info.MemoryPercent > cfg.MemLimit {
 		log.Printf("[ALERT] Limites de recursos excedidos (CPU/RAM)\n")
-		sendServiceEmail(cfg, "", "ResourceAlert", "🚨 Alerta ANFeGuard — Uso elevado de recursos")
+		sendServiceEmail(cfg, "", "ResourceAlert", "Alerta ANFeGuard — Uso elevado de recursos")
 	}
 }
 
@@ -74,7 +74,7 @@ func monitorServices(cfg MonitorConfig) {
 	for _, svc := range services {
 		status, err := winservice.GetStatus(svc)
 		if err != nil {
-			logServiceError(cfg, svc, "Unknown", fmt.Sprintf("Erro ao obter status: %v", err), sysInfo)
+			logServiceError(svc, "Unknown", fmt.Sprintf("Erro ao obter status: %v", err), &sysInfo)
 			continue
 		}
 
@@ -84,21 +84,21 @@ func monitorServices(cfg MonitorConfig) {
 		}
 
 		// Serviço parado
-		retryServiceStart(cfg, svc, status, sysInfo)
+		retryServiceStart(cfg, svc, status, &sysInfo)
 	}
 }
 
 // =====================================================
 // LÓGICA DE RETENTATIVA DE INÍCIO DE SERVIÇO
 // =====================================================
-func retryServiceStart(cfg MonitorConfig, svc string, status winservice.ServiceStatus, sysInfo *sysinfo.SystemInfo) {
+func retryServiceStart(cfg MonitorConfig, svc string, status winservice.Status, sysInfo *sysinfo.SysInfo) {
 
 	retryCount[svc]++
 
 	// Excedeu tentativas
 	if retryCount[svc] > cfg.MaxRetries {
 		log.Printf("[ERROR] Serviço '%s' atingiu o máximo de tentativas (%d)\n", svc, cfg.MaxRetries)
-		sendServiceEmail(cfg, svc, "MaxRetries", "🚨 ANFeGuard — Máximo de tentativas atingido")
+		sendServiceEmail(cfg, svc, "MaxRetries", "ANFeGuard — Máximo de tentativas atingido")
 		return
 	}
 
@@ -106,17 +106,17 @@ func retryServiceStart(cfg MonitorConfig, svc string, status winservice.ServiceS
 	log.Printf("[ALERT] Serviço '%s' está parado. Tentativa %d/%d\n",
 		svc, retryCount[svc], cfg.MaxRetries)
 
-	logServiceError(cfg, svc, string(status), "Serviço parado", sysInfo)
+	logServiceError(svc, string(status), "Serviço parado", sysInfo)
 
-	sendServiceEmail(cfg, svc, "Stopped", "🚨 Serviço parado — Tentando iniciar...")
+	sendServiceEmail(cfg, svc, "Stopped", "Serviço parado — Tentando iniciar...")
 
 	// Tentar iniciar
 	if err := winservice.Start(svc); err != nil {
 		msg := fmt.Sprintf("Falha ao iniciar: %v", err)
 		log.Printf("[ERROR] %s\n", msg)
 
-		sendServiceEmail(cfg, svc, "StartFailed", "❌ Falha ao iniciar serviço!")
-		logServiceError(cfg, svc, string(status), msg, sysInfo)
+		sendServiceEmail(cfg, svc, "StartFailed", "Falha ao iniciar serviço!")
+		logServiceError(svc, string(status), msg, sysInfo)
 
 		return
 	}
@@ -125,7 +125,7 @@ func retryServiceStart(cfg MonitorConfig, svc string, status winservice.ServiceS
 	resetRetries(svc)
 
 	log.Printf("[SUCCESS] Serviço '%s' iniciado com sucesso.\n", svc)
-	sendServiceEmail(cfg, svc, "Started", "✅ Serviço iniciado com sucesso!")
+	sendServiceEmail(cfg, svc, "Started", "Serviço iniciado com sucesso!")
 }
 
 // =====================================================
@@ -141,7 +141,7 @@ func resetRetries(service string) {
 // =====================================================
 // LOG DE ERRO CENTRALIZADO
 // =====================================================
-func logServiceError(cfg MonitorConfig, svc, status, msg string, info *sysinfo.SystemInfo) {
+func logServiceError(svc, status, msg string, info *sysinfo.SysInfo) {
 	log.Printf("[ERROR] Serviço '%s' | Status: %s | %s\n", svc, status, msg)
 	database.LogServiceError(svc, status, msg, info.MemoryPercent)
 }

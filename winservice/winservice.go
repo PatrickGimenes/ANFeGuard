@@ -7,7 +7,7 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-type Status string
+type Status string 
 
 const (
 	StatusRunning  Status = "Running"
