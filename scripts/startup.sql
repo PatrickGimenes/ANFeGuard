@@ -12,8 +12,9 @@ select * from portas;
 --drop table servicos;
 CREATE TABLE servicos (
     id SERIAL PRIMARY KEY,
-    nome VARCHAR(15) NOT NULL UNIQUE,
-    status SMALLINT NOT NULL DEFAULT 1
+    nome VARCHAR(50) NOT NULL UNIQUE,
+    displayname VARCHAR(50) NOT NULL UNIQUE,
+    ativo SMALLINT NOT NULL DEFAULT 1
 );
 
 

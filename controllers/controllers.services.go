@@ -22,14 +22,19 @@ func CriarServico(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nome := r.FormValue("servicename")
-	if nome == "" {
+	ServiceName := r.FormValue("servicename")
+	if ServiceName == "" {
 		http.Error(w, "O campo 'servicename' é obrigatório", http.StatusBadRequest)
+		return
+	}
+	displayName := r.FormValue("displayname")
+	if displayName == "" {
+		http.Error(w, "O campo 'displayname' é obrigatório", http.StatusBadRequest)
 		return
 	}
 
 	// Insere no banco
-	_, err := database.DB.Exec(`INSERT INTO servicos (nome) VALUES ($1)`, nome)
+	_, err := database.DB.Exec(`INSERT INTO servicos (nome, displayname) VALUES ($1, $2)`, ServiceName, displayName)
 	if err != nil {
 		http.Error(w, "Erro ao inserir serviço: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -37,17 +42,21 @@ func CriarServico(w http.ResponseWriter, r *http.Request) {
 
 	// Retorna algum conteúdo para HTMX (pode ser vazio, mas não JSON inválido)
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(nome)) // HTMX aceita texto simples
+	w.Write([]byte(ServiceName)) // HTMX aceita texto simples
 }
 
 func HandleServices(w http.ResponseWriter, r *http.Request) {
+
+	//mover para models/Service.go
 	type Service struct {
-		ID     int               `json:"id"`
-		Nome   string            `json:"nome"`
-		Status winservice.Status `json:"status"`
+		ID          int               `json:"id"`
+		Nome        string            `json:"nome"`
+		DisplayName string            `json:"displayname"`
+		Ativo       bool              `json:"ativo"`
+		Status      winservice.Status `json:"status"`
 	}
 
-	rows, err := database.DB.Query(`SELECT id, nome, status FROM servicos ORDER BY nome ASC`)
+	rows, err := database.DB.Query(`SELECT id, nome, displayname, ativo FROM servicos ORDER BY nome ASC`)
 	if err != nil {
 		log.Println("Erro ao listar serviços:", err)
 		http.Error(w, "Erro ao listar serviços", http.StatusInternalServerError)
@@ -59,16 +68,22 @@ func HandleServices(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var s Service
-		var statusDB int
 
-		if err := rows.Scan(&s.ID, &s.Nome, &statusDB); err != nil {
+		if err := rows.Scan(&s.ID, &s.Nome, &s.DisplayName, &s.Ativo); err != nil {
 			http.Error(w, "Erro ao ler serviços", http.StatusInternalServerError)
 			return
 		}
 
-		winStatus, err := winservice.GetStatus(s.Nome)
-		if err == nil {
-			s.Status = winStatus
+		if s.Ativo {
+			winStatus, err := winservice.GetStatus(s.Nome)
+			if err != nil {
+				log.Printf("[Controller] Erro ao obter status do serviço %s: %v", s.Nome, err)
+			} else {
+				s.Status = winStatus
+			}
+
+		} else {
+			s.Status = winservice.StatusUnknown
 		}
 
 		services = append(services, s)
@@ -80,7 +95,9 @@ func HandleServices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(services)
+
 }
 
 func DeletarServico(w http.ResponseWriter, r *http.Request) {

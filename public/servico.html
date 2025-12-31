@@ -45,7 +45,13 @@
             <input
               type="text"
               name="servicename"
-              placeholder="Nome do serviço"
+              placeholder="Nome do serviço no Windows"
+              required
+            />
+            <input
+              type="text"
+              name="displayname"
+              placeholder="Nome de exebição do serviço"
               required
             />
             <div class="modal-actions">
@@ -85,6 +91,7 @@
               .map(
                 (srv) => `
               <div class="service-card ${srv.status}">
+                <h3>${srv.displayname}</h3>
                 <h3>${srv.nome}</h3>
                 <p>Status: <span>${srv.status}</span></p>
               </div>

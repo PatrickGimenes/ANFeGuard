@@ -48,10 +48,10 @@ func monitorSystem(cfg MonitorConfig) {
 		return
 	}
 
-	now := time.Now().Format("02/01/2006 15:04:05")
-
-	log.Printf("[INFO] %s | CPU: %.1f%% | RAM: %.1f%% | Disco(%s): %.1f%%",
-		now, info.CPUPercent, info.MemoryPercent, cfg.DiskPath, info.DiskUsedPercent)
+	//31/12/25 - removi para não ficar poluindo o log, agora só gera log quando houver um alto consumo
+	// now := time.Now().Format("02/01/2006 15:04:05")
+	// log.Printf("[INFO] %s | CPU: %.1f%% | RAM: %.1f%% | Disco(%s): %.1f%%",
+	// 	now, info.CPUPercent, info.MemoryPercent, cfg.DiskPath, info.DiskUsedPercent)
 
 	// Verifica limites
 	if info.CPUPercent > cfg.CPULimit || info.MemoryPercent > cfg.MemLimit {

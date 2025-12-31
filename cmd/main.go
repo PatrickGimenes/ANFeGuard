@@ -3,14 +3,16 @@ package main
 import (
 	"ANFeGuard/database"
 	"ANFeGuard/email"
+	"ANFeGuard/logs"
 	"ANFeGuard/monitor"
 	"ANFeGuard/router"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"fmt"
+	//"fmt"
 	"log"
 	"net/http"
 
@@ -19,6 +21,17 @@ import (
 
 func main() {
 
+	logFile, err := logs.OpenLogFile()
+	if err != nil {
+		log.Fatalf("Erro ao abrir arquivo de log: %v", err)
+	}
+
+	// Tela + arquivo
+	mw := io.MultiWriter(os.Stdout, logFile)
+
+	// Define saída global para o logger
+	log.SetOutput(mw)
+
 	godotenv.Load()
 
 	// Conecta ao banco
@@ -26,7 +39,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	router.SetupRoutes(mux)
-	fmt.Println("Servidor rodando em :8080 e monitorando recursos...")
+	//fmt.Println("Servidor rodando em :8080 e monitorando recursos...")
 
 	period, err := strconv.Atoi(os.Getenv("PERIOD"))
 	if err != nil {
