@@ -17,8 +17,9 @@ func SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/health", handleHealth)
 	mux.HandleFunc("/api/metrics", handleMetrics)
 
-	mux.HandleFunc("GET /api/servicos", controllers.HandleServices)
-	mux.HandleFunc("POST /api/servico", controllers.CriarServico)
+	mux.HandleFunc("/api/servicos", controllers.HandleServices)
+	mux.HandleFunc("/api/servico", controllers.CriarServico)
+	mux.HandleFunc("/api/servico/restart", controllers.RestartService )
 
 
 	mux.HandleFunc("/api/portas", controllers.ListarPortas)
@@ -26,6 +27,7 @@ func SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/porta/{id}", controllers.DeletarPorta)
 
 	mux.HandleFunc("/api/logs", HandleLogs)
+
 
 }
 

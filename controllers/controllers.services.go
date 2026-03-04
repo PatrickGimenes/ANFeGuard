@@ -33,8 +33,14 @@ func CriarServico(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chave := r.FormValue("chave")
+	if chave == "" {
+		http.Error(w, "O campo 'chave' é obrigatório", http.StatusBadRequest)
+		return
+	}
+
 	// Insere no banco
-	_, err := database.DB.Exec(`INSERT INTO servicos (nome, displayname) VALUES ($1, $2)`, ServiceName, displayName)
+	_, err := database.DB.Exec(`INSERT INTO servicos (nome, displayname, chave) VALUES ($1, $2, $3)`, ServiceName, displayName, chave)
 	if err != nil {
 		http.Error(w, "Erro ao inserir serviço: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -136,4 +142,73 @@ func EditarServico(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+
+func RestartService(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type RestartRequest struct {
+		Chave string `json:"chave"`
+	}
+
+	type Service struct {
+		Nome string `json:"nome"`
+	}
+
+	var req RestartRequest
+
+	// Decodifica o JSON
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "JSON inválido", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := database.DB.Query(
+		`SELECT nome FROM servicos WHERE chave = $1`,
+		req.Chave,
+	)
+	if err != nil {
+		log.Println("Erro ao buscar serviço:", err)
+		http.Error(w, "Erro ao buscar serviço", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var encontrado bool
+
+	for rows.Next() {
+		encontrado = true
+
+		var s Service
+
+		if err := rows.Scan(&s.Nome); err != nil {
+			http.Error(w, "Erro ao ler serviço", http.StatusInternalServerError)
+			return
+		}
+
+		_, err := winservice.RestartService(s.Nome)
+		if err != nil {
+			log.Printf("Erro ao reiniciar serviço %s: %v", s.Nome, err)
+			http.Error(w, "Erro ao reiniciar serviço", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Erro ao processar resultados", http.StatusInternalServerError)
+		return
+	}
+
+	if !encontrado {
+		http.Error(w, "Serviço não encontrado", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Serviço reiniciado com sucesso"))
 }

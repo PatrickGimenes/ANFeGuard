@@ -14,9 +14,12 @@ CREATE TABLE servicos (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(50) NOT NULL UNIQUE,
     displayname VARCHAR(50) NOT NULL UNIQUE,
+    chave VARCHAR(80) NOT NULL UNIQUE,
     ativo SMALLINT NOT NULL DEFAULT 1
 );
 
+--ALTER TABLE servicos
+--ADD COLUMN chave VARCHAR(80) NOT NULL UNIQUE;
 
 --delete from servicos where id = 3;
 select * from servicos;

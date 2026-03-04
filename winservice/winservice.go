@@ -82,7 +82,7 @@ func Start(serviceName string) error {
 }
 
 // Restart reinicia o serviço
-func Restart(serviceName string) error {
+func RestartService(serviceName string) error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return fmt.Errorf("erro ao conectar ao gerenciador de serviços: %w", err)
