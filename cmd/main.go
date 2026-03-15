@@ -6,6 +6,7 @@ import (
 	"ANFeGuard/logs"
 	"ANFeGuard/monitor"
 	"ANFeGuard/router"
+	"ANFeGuard/version"
 	"io"
 	"os"
 	"strconv"
@@ -20,10 +21,13 @@ import (
 )
 
 func main() {
+	//define a informações que serão exibidas no log: 2026/03/15 20:42:11.234567 monitor.go:45: [INFO] isso é um exemplo
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+	logs.Info("Versão atual:  %s", version.Version)
 
 	logFile, err := logs.OpenLogFile()
 	if err != nil {
-		log.Fatalf("Erro ao abrir arquivo de log: %v", err)
+		logs.Critical("Erro ao abrir arquivo de log: %v", err)
 	}
 
 	// Tela + arquivo
@@ -35,33 +39,40 @@ func main() {
 	godotenv.Load()
 
 	// Conecta ao banco
-	database.Conectar()
+	if err := database.Conectar(); err != nil {
+		logs.Critical("Falha ao iniciar banco: %v", err)
+	}
 
 	mux := http.NewServeMux()
 	router.SetupRoutes(mux)
-	//fmt.Println("Servidor rodando em :8080 e monitorando recursos...")
 
 	period, err := strconv.Atoi(os.Getenv("PERIOD"))
 	if err != nil {
-		log.Println("Erro ao converter:", err)
+		logs.Error("Erro ao converter:", err)
 		return
 	}
 
 	port, err := strconv.Atoi(os.Getenv("EMAIL_PORT"))
 	if err != nil {
-		log.Println("Erro ao converter:", err)
+		logs.Error("Erro ao converter:", err)
 		return
 	}
 
 	max, err := strconv.Atoi(os.Getenv("MAX_RETRIES"))
 	if err != nil {
-		log.Println("Erro ao converter:", err)
+		logs.Error("Erro ao converter:", err)
 		return
 	}
 
+	// timeOut, err := strconv.Atoi(os.Getenv("TIMEOUT"))
+	// if err != nil {
+	// 	logs.Error("Erro ao converter:", err)
+	// 	return
+	// }
+
 	limit, err := strconv.ParseFloat(os.Getenv("THRESHOLD_WARNING"), 64) // 64 é a precisão (float64)
 	if err != nil {
-		log.Println("Erro ao converter:", err)
+		logs.Error("Erro ao converter:", err)
 		return
 	}
 
@@ -83,16 +94,17 @@ func main() {
 		CPULimit:   limit,
 		MemLimit:   limit,
 		DiskPath:   os.Getenv("DISK"),
+		// TimeOut: int8(timeOut),
 	}
 
 	go monitor.Start(cfg)
 	API_port := os.Getenv("API_PORT")
 	if API_port == "" {
-		API_port = "8080" // porta padrão
+		API_port = "30000" // porta padrão
 	}
 	addr := ":" + API_port // forma correta para ListenAndServe
-	log.Printf("Servidor rodando em http://localhost%s", addr)
+	logs.Info("Servidor rodando em http://localhost%s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatalf("Erro ao iniciar servidor: %v", err)
+		logs.Critical("Erro ao iniciar servidor: %v", err)
 	}
 }

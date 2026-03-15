@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
@@ -54,6 +54,12 @@
               placeholder="Nome de exebição do serviço"
               required
             />
+            <input
+              type="text"
+              name="chave"
+              placeholder="Licença do serviço"
+              required
+            />
             <div class="modal-actions">
               <button type="submit" class="btn-primary">Salvar</button>
               <button
@@ -93,9 +99,10 @@
               <div class="service-card ${srv.status}">
                 <h3>${srv.displayname}</h3>
                 <h3>${srv.nome}</h3>
+                <h3>${srv.chave}</h3>
                 <p>Status: <span>${srv.status}</span></p>
               </div>
-            `
+            `,
               )
               .join("");
           } catch (err) {

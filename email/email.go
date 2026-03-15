@@ -1,11 +1,11 @@
 package email
 
 import (
+	"ANFeGuard/logs"
 	"bytes"
 	"encoding/base64"
 	"fmt"
 	"html/template"
-	"log"
 	"net/smtp"
 	"strings"
 )
@@ -34,6 +34,7 @@ func encodeSubject(subject string) string {
 }
 
 func SendEmail(cfg SMTPConfig, to []string, subject, templatePath string, data EmailAlertData) error {
+	defer logs.Track("Enviar e-mail")()
 	// Carregar template
 	templ, err := template.ParseFiles(templatePath)
 	if err != nil {
@@ -68,6 +69,6 @@ func SendEmail(cfg SMTPConfig, to []string, subject, templatePath string, data E
 		return err
 	}
 
-	log.Printf("[INFO] E-mail enviado para %v \n", to)
+	logs.Info("E-mail enviado para %v \n", to)
 	return nil
 }

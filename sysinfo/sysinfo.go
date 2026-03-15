@@ -20,6 +20,7 @@ type SysInfo struct {
 }
 
 func GetSystemInfo(drivePath string) (SysInfo, error) {
+
 	var info SysInfo
 
 	//CPU

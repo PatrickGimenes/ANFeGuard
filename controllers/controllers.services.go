@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
 	"ANFeGuard/database"
+	"ANFeGuard/logs"
 	"ANFeGuard/winservice"
 )
 
@@ -60,11 +60,12 @@ func HandleServices(w http.ResponseWriter, r *http.Request) {
 		DisplayName string            `json:"displayname"`
 		Ativo       bool              `json:"ativo"`
 		Status      winservice.Status `json:"status"`
+		Chave       string            `json:"chave"`
 	}
 
-	rows, err := database.DB.Query(`SELECT id, nome, displayname, ativo FROM servicos ORDER BY nome ASC`)
+	rows, err := database.DB.Query(`SELECT id, nome, displayname, ativo, chave FROM servicos ORDER BY nome ASC`)
 	if err != nil {
-		log.Println("Erro ao listar serviços:", err)
+		logs.Error("Erro ao listar serviços:", err)
 		http.Error(w, "Erro ao listar serviços", http.StatusInternalServerError)
 		return
 	}
@@ -75,7 +76,7 @@ func HandleServices(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var s Service
 
-		if err := rows.Scan(&s.ID, &s.Nome, &s.DisplayName, &s.Ativo); err != nil {
+		if err := rows.Scan(&s.ID, &s.Nome, &s.DisplayName, &s.Ativo, &s.Chave); err != nil {
 			http.Error(w, "Erro ao ler serviços", http.StatusInternalServerError)
 			return
 		}
@@ -83,7 +84,7 @@ func HandleServices(w http.ResponseWriter, r *http.Request) {
 		if s.Ativo {
 			winStatus, err := winservice.GetStatus(s.Nome)
 			if err != nil {
-				log.Printf("[Controller] Erro ao obter status do serviço %s: %v", s.Nome, err)
+				logs.Error("Erro ao obter status do serviço %s: %v", s.Nome, err)
 			} else {
 				s.Status = winStatus
 			}
@@ -107,7 +108,7 @@ func HandleServices(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeletarServico(w http.ResponseWriter, r *http.Request) {
-	log.Println("DELETE chamado em:", r.URL.Path)
+	logs.Router("DELETE chamado em:", r.URL.Path)
 
 	id := r.PathValue("id")
 	if id == "" {
@@ -144,9 +145,8 @@ func EditarServico(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-
 func RestartService(w http.ResponseWriter, r *http.Request) {
-
+	defer logs.Track("POST reiniciar serviço")()
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
 		return
@@ -168,12 +168,14 @@ func RestartService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logs.Router("%s | %s", r.URL.Path, req.Chave)
+
 	rows, err := database.DB.Query(
 		`SELECT nome FROM servicos WHERE chave = $1`,
 		req.Chave,
 	)
 	if err != nil {
-		log.Println("Erro ao buscar serviço:", err)
+		logs.Error("Erro ao buscar serviço:", err)
 		http.Error(w, "Erro ao buscar serviço", http.StatusInternalServerError)
 		return
 	}
@@ -191,9 +193,9 @@ func RestartService(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err := winservice.RestartService(s.Nome)
+		err := winservice.RestartService(s.Nome)
 		if err != nil {
-			log.Printf("Erro ao reiniciar serviço %s: %v", s.Nome, err)
+			logs.Error("Erro ao reiniciar serviço %s: %v", s.Nome, err)
 			http.Error(w, "Erro ao reiniciar serviço", http.StatusInternalServerError)
 			return
 		}
