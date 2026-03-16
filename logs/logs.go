@@ -6,13 +6,16 @@ import (
 )
 
 func OpenLogFile() (*os.File, error) {
-	baseDir, err := os.Getwd()
+	exePath, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 
+	baseDir := filepath.Dir(exePath)
+
 	logDir := filepath.Join(baseDir, "Logs")
 	logPath := filepath.Join(logDir, "logs.txt")
+
 
 	// Cria o diretório Logs se não existir
 	if err := os.MkdirAll(logDir, 0755); err != nil {

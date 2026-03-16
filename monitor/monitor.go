@@ -7,6 +7,8 @@ import (
 	"ANFeGuard/sysinfo"
 	"ANFeGuard/winservice"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"sync"
@@ -295,19 +297,23 @@ func sendServiceEmail(cfg MonitorConfig, serviceName, status string, subject str
 }
 
 func selectTemplate(status string) string {
+	exePath, _ := os.Executable()
+	baseDir := filepath.Dir(exePath)
+	emailTemplates := filepath.Join(baseDir, "email", "templates")
+
 	switch status {
 	case "Stopped":
-		return "email/templates/service_stopped.html"
+		return filepath.Join(emailTemplates, "service_stopped.html")
 	case "Started":
-		return "email/templates/service_started.html"
+		return filepath.Join(emailTemplates, "service_started.html")
 	case "StartFailed":
-		return "email/templates/service_failed.html"
+		return filepath.Join(emailTemplates, "service_failed.html")
 	case "ResourceAlert":
-		return "email/templates/alerta_recursos.html"
+		return filepath.Join(emailTemplates, "alerta_recursos.html")
 	case "MaxRetries":
-		return "email/templates/max_retries.html"
+		return filepath.Join(emailTemplates, "max_retries.html")
 	default:
-		return "email/templates/generic_alert.html"
+		return filepath.Join(emailTemplates, "generic_alert.html")
 	}
 }
 

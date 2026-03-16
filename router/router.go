@@ -5,13 +5,21 @@ import (
 	"ANFeGuard/database"
 	"ANFeGuard/sysinfo"
 	"encoding/json"
+	"os"
+	"path/filepath"
 
 	"net/http"
 )
 
 func SetupRoutes(mux *http.ServeMux) {
 
-	fs := http.FileServer(http.Dir("public"))
+	exePath, _ := os.Executable()
+	baseDir := filepath.Dir(exePath)
+
+	publicDir := filepath.Join(baseDir, "public")
+
+	fs := http.FileServer(http.Dir(publicDir))
+
 	mux.Handle("/", fs)
 
 	mux.HandleFunc("/api/health", handleHealth)
@@ -19,15 +27,13 @@ func SetupRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("/api/servicos", controllers.HandleServices)
 	mux.HandleFunc("/api/servico", controllers.CriarServico)
-	mux.HandleFunc("/api/servico/restart", controllers.RestartService )
-
+	mux.HandleFunc("/api/servico/restart", controllers.RestartService)
 
 	mux.HandleFunc("/api/portas", controllers.ListarPortas)
 	mux.HandleFunc("/api/porta", controllers.CriarPorta)
 	mux.HandleFunc("/api/porta/{id}", controllers.DeletarPorta)
 
 	mux.HandleFunc("/api/logs", HandleLogs)
-
 
 }
 

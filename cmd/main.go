@@ -7,8 +7,8 @@ import (
 	"ANFeGuard/monitor"
 	"ANFeGuard/router"
 	"ANFeGuard/version"
-	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,9 +18,17 @@ import (
 	"net/http"
 
 	"github.com/joho/godotenv"
+	"github.com/kardianos/service"
 )
 
-func main() {
+type program struct{}
+
+func (p *program) Start(s service.Service) error {
+	go p.run()
+	return nil
+}
+
+func (p *program) run() {
 	//define a informações que serão exibidas no log: 2026/03/15 20:42:11.234567 monitor.go:45: [INFO] isso é um exemplo
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 	logs.Info("Versão atual:  %s", version.Version)
@@ -30,13 +38,19 @@ func main() {
 		logs.Critical("Erro ao abrir arquivo de log: %v", err)
 	}
 
-	// Tela + arquivo
+	/*
+	Não funciona para serviços do Windows
+	Tela + arquivo
 	mw := io.MultiWriter(os.Stdout, logFile)
-
-	// Define saída global para o logger
+	Define saída global para o logger
 	log.SetOutput(mw)
+*/
 
-	godotenv.Load()
+	log.SetOutput(logFile)
+
+	exePath, _ := os.Executable()
+	baseDir := filepath.Dir(exePath)
+	godotenv.Load(baseDir + "\\.env")
 
 	// Conecta ao banco
 	if err := database.Conectar(); err != nil {
@@ -106,5 +120,38 @@ func main() {
 	logs.Info("Servidor rodando em http://localhost%s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		logs.Critical("Erro ao iniciar servidor: %v", err)
+	}
+}
+
+func (p *program) Stop(s service.Service) error {
+	log.Println("Serviço parado")
+	return nil
+}
+
+func main() {
+
+	svcConfig := &service.Config{
+		Name:        "ANFeGuard",
+		DisplayName: "ANFeGuard",
+		Description: "Monitor de recursos e serviços",
+	}
+
+	prg := &program{}
+	s, err := service.New(prg, svcConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(os.Args) > 1 {
+		err = service.Control(s, os.Args[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	err = s.Run()
+	if err != nil {
+		log.Fatal(err)
 	}
 }
