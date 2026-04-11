@@ -51,11 +51,13 @@ var goroutineCounter uint64
 // Controla tentativas por serviço
 var retryCount = map[string]int{}
 
-// Controla se o e-mail por
+// Controla se o e-mail de maximo de tentativas já foi enviado
 var reachMaxRetries = map[string]bool{}
 
 // Adicionada para travar a escrita no retryCount
 var retryMutex sync.Mutex
+
+
 
 // Para evitar execução simultanea na função Start
 var monitorRunning bool
@@ -143,18 +145,7 @@ func monitorSystem(cfg MonitorConfig, cycle uint64, gid uint64) {
 	)
 	data := getServerData()
 
-	/*
-		31/12/25 - removi para não ficar poluindo o log, agora só gera log quando houver um alto consumo
-		 now := time.Now().Format("02/01/2006 15:04:05")
-		 logs.Info("%s | CPU: %.1f%% | RAM: %.1f%% | Disco(%s): %.1f%%", now,
-		  info.CPUPercent, info.MemoryPercent, cfg.DiskPath, info.DiskUsedPercent)
-	*/
-
-	// Verifica limites
-	if data.CPU > cfg.CPULimit || data.Memory > cfg.MemLimit {
-		logs.Warn("Limites de recursos excedidos (mediana CPU/RAM)")
-		sendServiceEmail(cfg, "", "ResourceAlert", "Alerta ANFeGuard — Uso elevado de recursos")
-	}
+	HandleResourceAlert(data, cfg)
 }
 
 // =====================================================

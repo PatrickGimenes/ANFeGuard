@@ -13,13 +13,17 @@ select * from portas;
 CREATE TABLE servicos (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(50) NOT NULL UNIQUE,
-    displayname VARCHAR(50) NOT NULL UNIQUE,
+    displayName VARCHAR(50) NOT NULL UNIQUE,
     chave VARCHAR(80) NOT NULL UNIQUE,
+    urlApi VARCHAR(80) NOT NULL,
     ativo SMALLINT NOT NULL DEFAULT 1
 );
 
 --ALTER TABLE servicos
 --ADD COLUMN chave VARCHAR(80) NOT NULL UNIQUE;
+
+--ALTER TABLE servicos
+--ADD COLUMN urlApi VARCHAR(80) NOT NULL;
 
 --delete from servicos where id = 3;
 select * from servicos;

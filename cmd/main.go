@@ -31,7 +31,6 @@ func (p *program) Start(s service.Service) error {
 func (p *program) run() {
 	//define a informações que serão exibidas no log: 2026/03/15 20:42:11.234567 monitor.go:45: [INFO] isso é um exemplo
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
-	logs.Info("Versão atual:  %s", version.Version)
 
 	logFile, err := logs.OpenLogFile()
 	if err != nil {
@@ -39,12 +38,12 @@ func (p *program) run() {
 	}
 
 	/*
-	Não funciona para serviços do Windows
-	Tela + arquivo
-	mw := io.MultiWriter(os.Stdout, logFile)
-	Define saída global para o logger
-	log.SetOutput(mw)
-*/
+		Não funciona para serviços do Windows
+		Tela + arquivo
+		mw := io.MultiWriter(os.Stdout, logFile)
+		Define saída global para o logger
+		log.SetOutput(mw)
+	*/
 
 	log.SetOutput(logFile)
 
@@ -52,6 +51,8 @@ func (p *program) run() {
 	baseDir := filepath.Dir(exePath)
 	godotenv.Load(baseDir + "\\.env")
 
+	logs.Info("Versão atual:  %s", version.Version)
+	
 	// Conecta ao banco
 	if err := database.Conectar(); err != nil {
 		logs.Critical("Falha ao iniciar banco: %v", err)
@@ -117,7 +118,7 @@ func (p *program) run() {
 		API_port = "30000" // porta padrão
 	}
 	addr := ":" + API_port // forma correta para ListenAndServe
-	logs.Info("Servidor rodando em http://localhost%s", addr)
+	logs.Info("Servidor rodando em http://0.0.0.0%s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		logs.Critical("Erro ao iniciar servidor: %v", err)
 	}
