@@ -265,4 +265,23 @@ Se você deseja contribuir para o projeto, siga as etapas abaixo:
 3. Faça suas alterações.
 4. Envie um pull request detalhando as mudanças feitas.
 
+
+### Padrão de branchs e commits
+
+| Feat	| Nova funcionalidade|
+|-------|--------------------|
+| fix | Correção de bug |
+| chore | Coisas internas (config, build, etc) |
+| refactor | Melhoria sem mudar  comportamento |
+| perf | Melhoria de performance |
+| test | Testes |
+| docs | Documentação |
+
+Exemplos:
+- feat(monitoring): add resource usage alert system
+- refactor(alert): simplify alert control logic
+- perf(monitoring): optimize resource usage checks
+- chore(service): update service configuration
+
+
 Feito com ❤️ por Patrick
