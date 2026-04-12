@@ -6,6 +6,7 @@ import (
 	"ANFeGuard/logs"
 	"ANFeGuard/monitor"
 	"ANFeGuard/router"
+	"ANFeGuard/scheduler"
 	"ANFeGuard/version"
 	"os"
 	"path/filepath"
@@ -52,7 +53,7 @@ func (p *program) run() {
 	godotenv.Load(baseDir + "\\.env")
 
 	logs.Info("Versão atual:  %s", version.Version)
-	
+
 	// Conecta ao banco
 	if err := database.Conectar(); err != nil {
 		logs.Critical("Falha ao iniciar banco: %v", err)
@@ -78,12 +79,6 @@ func (p *program) run() {
 		logs.Error("Erro ao converter:", err)
 		return
 	}
-
-	// timeOut, err := strconv.Atoi(os.Getenv("TIMEOUT"))
-	// if err != nil {
-	// 	logs.Error("Erro ao converter:", err)
-	// 	return
-	// }
 
 	limit, err := strconv.ParseFloat(os.Getenv("THRESHOLD_WARNING"), 64) // 64 é a precisão (float64)
 	if err != nil {
@@ -111,6 +106,8 @@ func (p *program) run() {
 		DiskPath:   os.Getenv("DISK"),
 		// TimeOut: int8(timeOut),
 	}
+
+	go scheduler.StartScheduler()
 
 	go monitor.Start(cfg)
 	API_port := os.Getenv("API_PORT")

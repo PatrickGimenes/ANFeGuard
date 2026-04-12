@@ -32,6 +32,7 @@
           + Adicionar Serviço
         </button>
 
+        <div id="error-box" class="error-box" style="display: none"></div>
         <!-- Modal de cadastro -->
         <dialog id="modal" class="modal">
           <form
@@ -51,13 +52,19 @@
             <input
               type="text"
               name="displayname"
-              placeholder="Nome de exebição do serviço"
+              placeholder="Nome de exibição do serviço"
               required
             />
             <input
               type="text"
               name="chave"
               placeholder="Licença do serviço"
+              required
+            />
+            <input
+              type="text"
+              name="url"
+              placeholder="Endereço da API"
               required
             />
             <div class="modal-actions">
@@ -86,26 +93,43 @@
     </div>
 
     <script>
-      // Renderização de cards
       document.body.addEventListener("htmx:afterRequest", (evt) => {
         if (evt.detail.pathInfo.requestPath === "/api/servicos") {
           const xhr = evt.detail.xhr;
+          const container = document.getElementById("service-list");
+          const errorBox = document.getElementById("error-box");
+
           try {
             const data = JSON.parse(xhr.responseText);
-            const container = document.getElementById("service-list");
+
+            if (xhr.status !== 200) {
+              errorBox.style.display = "block";
+              errorBox.innerText =
+                "Erro: " + (data.error || "Erro desconhecido");
+              container.innerHTML = "";
+              return;
+            }
+
+            errorBox.style.display = "none";
+
             container.innerHTML = data
               .map(
                 (srv) => `
-              <div class="service-card ${srv.status}">
-                <h3>${srv.displayname}</h3>
-                <h3>${srv.nome}</h3>
-                <h3>${srv.chave}</h3>
-                <p>Status: <span>${srv.status}</span></p>
-              </div>
-            `,
+            <div class="service-card ${srv.status}">
+              <h3>${srv.displayname}</h3>
+              <p>${srv.nome}</p>
+              <p>${srv.chave}</p>
+              <p>${srv.url}</p>
+              <p>Status: <span>${srv.status}</span></p>
+            </div>
+          `,
               )
               .join("");
           } catch (err) {
+            errorBox.style.display = "block";
+            errorBox.innerText = "Erro ao processar resposta da API";
+            container.innerHTML = "";
+
             console.error("Erro ao processar JSON:", err);
           }
         }
