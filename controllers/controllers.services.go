@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -39,8 +40,14 @@ func CriarServico(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	url := r.FormValue("url")
+	if url == "" {
+		http.Error(w, "O campo 'url' é obrigatório", http.StatusBadRequest)
+		return
+	}
+
 	// Insere no banco
-	_, err := database.DB.Exec(`INSERT INTO servicos (nome, displayname, chave) VALUES ($1, $2, $3)`, ServiceName, displayName, chave)
+	_, err := database.DB.Exec(`INSERT INTO servicos (nome, displayname, chave, urlApi) VALUES ($1, $2, $3, $4)`, ServiceName, displayName, chave, url)
 	if err != nil {
 		http.Error(w, "Erro ao inserir serviço: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -53,6 +60,10 @@ func CriarServico(w http.ResponseWriter, r *http.Request) {
 
 func HandleServices(w http.ResponseWriter, r *http.Request) {
 
+	type ErrorResponse struct {
+		Error string `json:"error"`
+	}
+
 	//mover para models/Service.go
 	type Service struct {
 		ID          int               `json:"id"`
@@ -61,26 +72,40 @@ func HandleServices(w http.ResponseWriter, r *http.Request) {
 		Ativo       bool              `json:"ativo"`
 		Status      winservice.Status `json:"status"`
 		Chave       string            `json:"chave"`
+		URL         string            `json:"url"`
 	}
 
-	rows, err := database.DB.Query(`SELECT id, nome, displayname, ativo, chave FROM servicos ORDER BY nome ASC`)
+	rows, err := database.DB.Query(`SELECT id, nome, displayname, ativo, chave, urlApi FROM servicos ORDER BY nome ASC`)
 	if err != nil {
 		logs.Error("Erro ao listar serviços:", err)
-		http.Error(w, "Erro ao listar serviços", http.StatusInternalServerError)
+		//http.Error(w, "Erro ao listar serviços", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Erro ao ler serviços",
+		})
 		return
 	}
 	defer rows.Close()
 
 	var services []Service
+	var url sql.NullString
 
 	for rows.Next() {
 		var s Service
 
-		if err := rows.Scan(&s.ID, &s.Nome, &s.DisplayName, &s.Ativo, &s.Chave); err != nil {
-			http.Error(w, "Erro ao ler serviços", http.StatusInternalServerError)
+		if err := rows.Scan(&s.ID, &s.Nome, &s.DisplayName, &s.Ativo, &s.Chave, &url); err != nil {
+			//http.Error(w, "Erro ao ler serviços", http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{
+				Error: "Erro ao ler serviços",
+			})
 			return
 		}
-
+		if url.Valid {
+			s.URL = url.String
+		}
 		if s.Ativo {
 			winStatus, err := winservice.GetStatus(s.Nome)
 			if err != nil {
@@ -97,7 +122,12 @@ func HandleServices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := rows.Err(); err != nil {
-		http.Error(w, "Erro ao processar resultados", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Erro ao ler serviços",
+		})
+		//http.Error(w, "Erro ao processar resultados", http.StatusInternalServerError)
 		return
 	}
 
@@ -118,6 +148,7 @@ func DeletarServico(w http.ResponseWriter, r *http.Request) {
 
 	_, err := database.DB.Exec(`DELETE FROM servicos WHERE id = $1`, id)
 	if err != nil {
+
 		http.Error(w, "Erro ao deletar serviço: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

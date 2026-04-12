@@ -19,12 +19,6 @@ CREATE TABLE servicos (
     ativo SMALLINT NOT NULL DEFAULT 1
 );
 
---ALTER TABLE servicos
---ADD COLUMN chave VARCHAR(80) NOT NULL UNIQUE;
-
---ALTER TABLE servicos
---ADD COLUMN urlApi VARCHAR(80) NOT NULL;
-
 --delete from servicos where id = 3;
 select * from servicos;
 
