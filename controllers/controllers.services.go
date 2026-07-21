@@ -178,67 +178,74 @@ func EditarServico(w http.ResponseWriter, r *http.Request) {
 
 func RestartService(w http.ResponseWriter, r *http.Request) {
 	defer logs.Track("POST reiniciar serviço")()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
 		return
 	}
 
 	type RestartRequest struct {
-		Chave string `json:"chave"`
-	}
-
-	type Service struct {
-		Nome string `json:"nome"`
+		Chave   string `json:"chave"`
+		Usuario string `json:"usuario"`
+		Motivo  string `json:"motivo"`
 	}
 
 	var req RestartRequest
 
-	// Decodifica o JSON
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "JSON inválido", http.StatusBadRequest)
 		return
 	}
 
+	// Validação dos campos obrigatórios
+	if req.Chave == "" || req.Usuario == "" || req.Motivo == "" {
+		http.Error(w, "Chave, usuário e motivo são obrigatórios", http.StatusBadRequest)
+		return
+	}
+
 	logs.Router("%s | %s", r.URL.Path, req.Chave)
 
-	rows, err := database.DB.Query(
-		`SELECT nome FROM servicos WHERE chave = $1`,
+	var serviceName string
+
+	err := database.DB.QueryRow(
+		`SELECT nome
+		   FROM servicos
+		  WHERE porta_api = $1`,
 		req.Chave,
-	)
+	).Scan(&serviceName)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "Serviço não encontrado", http.StatusNotFound)
+		return
+	}
+
 	if err != nil {
-		logs.Error("Erro ao buscar serviço:", err)
+		logs.Error("Erro ao buscar serviço: %v", err)
 		http.Error(w, "Erro ao buscar serviço", http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
 
-	var encontrado bool
-
-	for rows.Next() {
-		encontrado = true
-
-		var s Service
-
-		if err := rows.Scan(&s.Nome); err != nil {
-			http.Error(w, "Erro ao ler serviço", http.StatusInternalServerError)
-			return
-		}
-
-		err := winservice.RestartService(s.Nome)
-		if err != nil {
-			logs.Error("Erro ao reiniciar serviço %s: %v", s.Nome, err)
-			http.Error(w, "Erro ao reiniciar serviço", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		http.Error(w, "Erro ao processar resultados", http.StatusInternalServerError)
+	// Reinicia o serviço
+	if err := winservice.RestartService(serviceName); err != nil {
+		logs.Error("Erro ao reiniciar serviço %s: %v", serviceName, err)
+		http.Error(w, "Erro ao reiniciar serviço", http.StatusInternalServerError)
 		return
 	}
 
-	if !encontrado {
-		http.Error(w, "Serviço não encontrado", http.StatusNotFound)
+	// Grava auditoria
+	_, err = database.DB.Exec(
+		`INSERT INTO auditoria
+			(servicename, action, username, message)
+		 VALUES ($1, $2, $3, $4)`,
+		serviceName,
+		"Restart",
+		req.Usuario,
+		req.Motivo,
+	)
+
+	if err != nil {
+		logs.Error("Erro ao inserir log de auditoria: %v", err)
+		http.Error(w, "Erro ao inserir log de auditoria", http.StatusInternalServerError)
 		return
 	}
 

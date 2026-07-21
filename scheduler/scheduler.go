@@ -209,8 +209,14 @@ func canRestartFromAPI(svc string) (bool, error) {
 
 	logs.Info("API retorno: success=%v message=%s", inner.Success, inner.Message)
 
-	// true → pode reiniciar
-	// false → NÃO pode reiniciar
+	// Se a validação estiver em execução, mas com erro -> reinicia o serviço mesmo assim - Ajuste realizado devido ao erro na Pague Menos
+	if inner.Success == false && strings.Contains(strings.ToLower(inner.Message), "Status: Erro") {
+		logs.Info("Serviço será reiniciado, pois rotina está presa. Retorno da API: success=%v message=%s", inner.Success, inner.Message)
+		return true, nil
+	}
+
+	// true -> pode reiniciar
+	// false -> NÃO pode reiniciar
 	return inner.Success, nil
 }
 
